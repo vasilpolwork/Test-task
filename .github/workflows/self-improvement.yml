@@ -2,8 +2,8 @@ name: AI Self-Improvement Agent
 
 on:
   # Run the workflow every 2 hours
-  schedule:
-    - cron: '0 */2 * * *'
+  #schedule:
+  #  - cron: '0 */2 * * *'
   # Allow manual trigger from the GitHub Actions tab
   workflow_dispatch:
 
