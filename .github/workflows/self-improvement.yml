@@ -1,0 +1,59 @@
+name: AI Self-Improvement Agent
+
+on:
+  # Run the workflow every 2 hours
+  schedule:
+    - cron: '0 */2 * * *'
+  # Allow manual trigger from the GitHub Actions tab
+  workflow_dispatch:
+
+jobs:
+  improve:
+    # Use the latest Ubuntu runner
+    runs-on: ubuntu-latest
+
+    # Grant write permissions to allow the bot to push changes
+    permissions:
+      contents: write
+
+    steps:
+      # Step 1: Check out the repository source code
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Step 2: Initialize Python environment
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # Step 3: Install required Python packages from requirements.txt
+      - name: Install Dependencies
+        run: pip install -r requirements.txt
+
+      # Step 4: Execute the AI agent to process and improve code
+      - name: Run AI Agent
+        env:
+          # API key from secrets
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Model name from repository variables
+          MODEL_NAME: ${{ vars.MODEL_NAME }}
+        run: python agent/agent.py
+
+      # Step 5: Commit and push changes back to the repository
+      - name: Commit and Push
+        run: |
+          # Configure Git bot identity
+          git config --global user.name "AI-Agent-Bot"
+          git config --global user.email "ai-bot@users.noreply.github.com"
+          
+          git add .
+          
+          # Check for changes before attempting to commit
+          if git diff --staged --quiet; then
+            echo "No improvements detected. Skipping commit."
+          else
+            # Use [skip ci] to prevent infinite workflow loops
+            git commit -m "chore: AI-driven self-improvement cycle [skip ci]"
+            git push
+          fi
