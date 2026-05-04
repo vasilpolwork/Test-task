@@ -31,29 +31,28 @@ jobs:
       - name: Install Dependencies
         run: pip install -r requirements.txt
 
-      # Step 4: Execute the AI agent to process and improve code
+      # Step 4: Run AI Agent
       - name: Run AI Agent
         env:
-          # API key from secrets
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          # Model name from repository variables
           MODEL_NAME: ${{ vars.MODEL_NAME }}
         run: python agent/agent.py
 
-      # Step 5: Commit and push changes back to the repository
+      # Step 5: Commit and Push with dynamic message
       - name: Commit and Push
         run: |
-          # Configure Git bot identity
           git config --global user.name "AI-Agent-Bot"
           git config --global user.email "ai-bot@users.noreply.github.com"
           
           git add .
           
-          # Check for changes before attempting to commit
-          if git diff --staged --quiet; then
-            echo "No improvements detected. Skipping commit."
-          else
-            # Use [skip ci] to prevent infinite workflow loops
-            git commit -m "chore: AI-driven self-improvement cycle [skip ci]"
+          if [ -f .commit_msg ]; then
+            # Read the AI-generated message and add [skip ci]
+            COMMIT_TEXT=$(cat .commit_msg)
+            git commit -m "$COMMIT_TEXT [skip ci]"
             git push
+            # Clean up the message file
+            rm .commit_msg
+          else
+            echo "No changes to commit."
           fi
