@@ -1,5 +1,26 @@
 import math
 
+def _validate_radius(radius: float) -> None:
+    """
+    Validate that the radius is a valid positive number.
+    
+    Args:
+        radius: The radius value to validate.
+        
+    Raises:
+        TypeError: If radius is not a number (excluding booleans).
+        ValueError: If radius is negative, NaN, or infinite.
+    """
+    if isinstance(radius, bool) or not isinstance(radius, (int, float)):
+        raise TypeError(f"Radius must be a number, got {type(radius).__name__}")
+    
+    if math.isnan(radius) or math.isinf(radius):
+        raise ValueError(f"Radius must be a finite number, got {radius}")
+    
+    if radius < 0:
+        raise ValueError(f"Radius must be non-negative, got {radius}")
+
+
 def calculate_area(radius: float) -> float:
     """
     Calculate the area of a circle given its radius.
@@ -13,18 +34,10 @@ def calculate_area(radius: float) -> float:
         The area of the circle as a float.
         
     Raises:
-        ValueError: If radius is negative.
+        ValueError: If radius is negative, NaN, or infinite.
         TypeError: If radius is not a number.
     """
-    if not isinstance(radius, (int, float)) or isinstance(radius, bool):
-        raise TypeError(f"Radius must be a number, got {type(radius).__name__}")
-    
-    if radius < 0:
-        raise ValueError(f"Radius must be non-negative, got {radius}")
-    
-    if math.isnan(radius) or math.isinf(radius):
-        raise ValueError(f"Radius must be a finite number, got {radius}")
-    
+    _validate_radius(radius)
     return math.pi * radius * radius
 
 
@@ -41,22 +54,15 @@ def calculate_circumference(radius: float) -> float:
         The circumference of the circle as a float.
         
     Raises:
-        ValueError: If radius is negative.
+        ValueError: If radius is negative, NaN, or infinite.
         TypeError: If radius is not a number.
     """
-    if not isinstance(radius, (int, float)) or isinstance(radius, bool):
-        raise TypeError(f"Radius must be a number, got {type(radius).__name__}")
-    
-    if radius < 0:
-        raise ValueError(f"Radius must be non-negative, got {radius}")
-    
-    if math.isnan(radius) or math.isinf(radius):
-        raise ValueError(f"Radius must be a finite number, got {radius}")
-    
+    _validate_radius(radius)
     return 2 * math.pi * radius
 
 
 if __name__ == "__main__":
+    # Test cases with valid radius values
     test_cases = [0, 1, 10, 2.5]
     
     print("Circle Calculations")
@@ -72,7 +78,7 @@ if __name__ == "__main__":
     
     print("-" * 50)
     
-    # Test error handling
+    # Test error handling with invalid inputs
     print("\nError Handling Tests:")
     error_cases = [(-5, "negative radius"), ("abc", "invalid type"), (float('nan'), "NaN value")]
     
