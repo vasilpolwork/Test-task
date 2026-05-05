@@ -1,15 +1,16 @@
 import anthropic
 import os
 import glob
+from datetime import datetime
 
-# Using model from environment variable with Haiku as fallback
-MODEL_NAME = os.environ.get("MODEL_NAME", "").strip() or "claude-3-haiku-20240307"
+# Model is retrieved from environment variables
+MODEL_NAME = os.environ.get("MODEL_NAME", "").strip()
 client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
 def process_with_ai(prompt, content):
     system_prompt = (
         "You are a professional SRE and Python developer. "
-        "IMPORTANT: All text MUST be in ENGLISH ONLY. "
+        "CRITICAL: All code comments, documentation, and text MUST be in ENGLISH ONLY. "
         "Return ONLY the requested content without markdown backticks or explanations."
     )
 
@@ -22,46 +23,79 @@ def process_with_ai(prompt, content):
     return response.content[0].text.strip()
 
 def main():
+    # Search for all Python files in the app/ directory
     files = glob.glob("app/*.py")
     all_summaries = []
+    app_context = ""
 
-    # 1. Improve Application Code
+    # Ensure the app directory exists
+    if not os.path.exists("app"):
+        print("Directory 'app/' not found.")
+        return
+
+    # 1. Code improvement and context gathering
     for file_path in files:
         with open(file_path, "r") as f:
             original_code = f.read()
 
+        app_context += f"\n--- File: {os.path.basename(file_path)} ---\n{original_code}\n"
+
         print(f"Improving {file_path}...")
-        improved_code = process_with_ai("Improve this code. Fix bugs, optimize, and add English comments.", original_code)
+        improvement_prompt = "Improve this code. Fix bugs, optimize, and ensure ALL comments are in English."
+        improved_code = process_with_ai(improvement_prompt, original_code)
 
         if improved_code and improved_code != original_code:
             with open(file_path, "w") as f:
                 f.write(improved_code)
 
-            # Generate a 5-word summary of what was done
-            summary = process_with_ai("Describe what you changed in this code in exactly 5-7 words.", improved_code)
+            summary = process_with_ai("Describe what you changed in this code in exactly 5-7 words (in English).", improved_code)
             all_summaries.append(f"{os.path.basename(file_path)}: {summary}")
 
     if not all_summaries:
         print("No changes made.")
         return
 
-    # 2. Update README.md
-    readme_path = "README.md"
+    # 2. Update app/README.md
+    app_readme_path = "app/README.md"
     current_readme = ""
-    if os.path.exists(readme_path):
-        with open(readme_path, "r") as f:
+    if os.path.exists(app_readme_path):
+        with open(app_readme_path, "r") as f:
             current_readme = f.read()
 
-    print("Updating README.md...")
-    changes_text = "\n".join([f"- {s}" for s in all_summaries])
-    readme_prompt = f"Update this README.md to reflect these recent improvements. Keep it professional and concise:\n{changes_text}"
+    print(f"Updating {app_readme_path}...")
+    readme_prompt = (
+        "Update the professional README.md for the 'app/' directory in ENGLISH. "
+        f"Context of all files:\n{app_context}\n\n"
+        f"Include these recent changes:\n{all_summaries}"
+    )
     new_readme = process_with_ai(readme_prompt, current_readme)
-
-    with open(readme_path, "w") as f:
+    with open(app_readme_path, "w") as f:
         f.write(new_readme)
 
-    # 3. Create a commit message file for the workflow
-    commit_msg = "feat(auto): " + "; ".join(all_summaries)
+    # 3. Update CHANGELOG.md (Root directory)
+    changelog_path = "CHANGELOG.md"
+    current_changelog = ""
+    if os.path.exists(changelog_path):
+        with open(changelog_path, "r") as f:
+            current_changelog = f.read()
+
+    print(f"Updating {changelog_path}...")
+    date_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+    changes_list = "\n".join([f"- {s}" for s in all_summaries])
+
+    # Generate a professional entry for the changelog
+    changelog_entry_prompt = (
+        f"Create a professional changelog entry in Markdown for the date {date_str}. "
+        f"Summarize these changes clearly:\n{changes_list}"
+    )
+    new_entry = process_with_ai(changelog_entry_prompt, "")
+
+    # Prepend the new entry to the top of the file
+    with open(changelog_path, "w") as f:
+        f.write(f"## [{date_str}]\n\n{new_entry}\n\n{current_changelog}")
+
+    # 4. Finalize commit message
+    commit_msg = "feat(auto): AI-driven code improvement and docs update"
     with open(".commit_msg", "w") as f:
         f.write(commit_msg)
 
