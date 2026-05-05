@@ -7,7 +7,7 @@ echo "🚀 Creating ephemeral machine in Hetzner Cloud..."
 
 hcloud server create \
   --name "$SERVER_NAME" \
-  --type cx22 \
+  --type cx23 \
   --image ubuntu-24.04 \
   --location nbg1 \
   --label "scope=ephemeral-test" \
