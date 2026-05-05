@@ -2,8 +2,8 @@ name: AI Self-Improvement Cycle & Ephemeral Testing
 
 on:
   # Automated cycle every 2 hours
-  schedule:
-    - cron: '0 */2 * * *'
+  #schedule:
+  #  - cron: '0 */2 * * *'
   # Manual trigger for debugging/testing
   workflow_dispatch:
 
