@@ -132,8 +132,7 @@ jobs:
         env:
           HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
         run: |
-          # Identify the server by the label assigned in deploy.sh
-          SERVER_ID=$(hcloud server list --label-selector scope=ephemeral-test -o noheader -o "columns=id")
+          SERVER_ID=$(hcloud server list --selector scope=ephemeral-test -o noheader -o "columns=id")
           if [ -n "$SERVER_ID" ]; then
             echo "Deleting server ID: $SERVER_ID"
             hcloud server delete $SERVER_ID
