@@ -112,16 +112,19 @@ jobs:
           name: improved-code
 
       - name: Commit and Push to Main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git config --global user.name "AI-Agent-Bot"
-          git config --global user.email "ai-bot@users.noreply.github.com"
-          
-          # Retrieve AI-generated commit message from Stage 1
-          COMMIT_TEXT=$(cat .commit_msg)
-          git add .
-          git reset .commit_msg # Exclude the temporary message file from commit
-          git commit -m "$COMMIT_TEXT [skip ci]"
-          git push
+            git config --global user.name "AI-Agent-Bot"
+            git config --global user.email "ai-bot@users.noreply.github.com"
+            
+            git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
+            
+            COMMIT_TEXT=$(cat .commit_msg)
+            git add .
+            git reset .commit_msg 
+            git commit -m "$COMMIT_TEXT [skip ci]"
+            git push origin HEAD:main
 
   # STAGE 5: Resource Cleanup (Cost Control)
   cleanup:
