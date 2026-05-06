@@ -74,6 +74,19 @@ Calculates the diameter of a circle given its radius.
 diameter = calculate_diameter(5)  # Returns 10
 ```
 
+### `_validate_radius(radius: float) -> None`
+
+Internal validation function for radius values.
+
+**Parameters:**
+- `radius` (float): The radius value to validate.
+
+**Raises:**
+- `TypeError`: If radius is not a number (excluding booleans).
+- `ValueError`: If radius is negative, NaN, or infinite.
+
+**Note:** This is a private function and should not be called directly in production code.
+
 ## Validation Rules
 
 - Radius must be numeric (int or float)
@@ -122,6 +135,18 @@ try:
     calculate_area(float('nan'))
 except ValueError as e:
     print(f"Error: {e}")
+
+# Handle infinite values
+try:
+    calculate_area(float('inf'))
+except ValueError as e:
+    print(f"Error: {e}")
+
+# Handle boolean values
+try:
+    calculate_area(True)
+except TypeError as e:
+    print(f"Error: {e}")
 ```
 
 ## Testing
@@ -139,16 +164,47 @@ This executes:
 
 ## Recent Changes
 
-- Added input validation function with comprehensive error handling
-- Implemented type checking with explicit boolean rejection
+- Added validation function `_validate_radius()` with comprehensive error handling
+- Implemented strict type checking with explicit boolean rejection
 - Added finite number validation (NaN and infinity detection)
-- Enhanced error messages for debugging and user feedback
+- Enhanced error messages for improved debugging and user feedback
+- Improved type hints for better code clarity and IDE support
 - Added `calculate_diameter()` function for complete circle property calculations
 
 ## Requirements
 
 - Python 3.6+
 - Standard library only (no external dependencies)
+
+## Installation
+
+Copy `main.py` to your project directory or Python path:
+
+```bash
+cp main.py /path/to/your/project/
+```
+
+## Error Handling Strategy
+
+The library uses a two-level validation approach:
+
+1. **Type Validation**: Ensures input is a numeric type (int or float) and rejects booleans
+2. **Value Validation**: Ensures the numeric value is valid (non-negative, finite)
+
+This separation allows calling code to handle different error conditions appropriately:
+
+```python
+from main import calculate_area
+
+try:
+    result = calculate_area(user_input)
+except TypeError:
+    # Handle type conversion or user input validation
+    print("Please enter a valid number")
+except ValueError:
+    # Handle mathematical constraints
+    print("Please enter a non-negative number")
+```
 
 ## License
 
