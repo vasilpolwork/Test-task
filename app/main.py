@@ -1,3 +1,4 @@
+```python
 import math
 
 def _validate_radius(radius: float) -> None:
@@ -38,7 +39,7 @@ def calculate_area(radius: float) -> float:
         TypeError: If radius is not a number.
     """
     _validate_radius(radius)
-    return math.pi * radius ** 2
+    return math.pi * (radius ** 2)
 
 
 def calculate_circumference(radius: float) -> float:
@@ -82,7 +83,7 @@ def calculate_diameter(radius: float) -> float:
 
 
 if __name__ == "__main__":
-    # Test cases with valid radius values
+    # Test cases with valid radius values.
     test_cases = [0, 1, 10, 2.5]
     
     print("Circle Calculations")
@@ -93,13 +94,17 @@ if __name__ == "__main__":
             area = calculate_area(radius)
             circumference = calculate_circumference(radius)
             diameter = calculate_diameter(radius)
-            print(f"Radius {radius:>5}: Area = {area:>10.2f}, Circumference = {circumference:>10.2f}, Diameter = {diameter:>8.2f}")
+            print(
+                f"Radius {radius:>5}: Area = {area:>10.2f}, "
+                f"Circumference = {circumference:>10.2f}, "
+                f"Diameter = {diameter:>8.2f}"
+            )
         except (ValueError, TypeError) as e:
             print(f"Error for radius {radius}: {e}")
     
     print("-" * 60)
     
-    # Test error handling with invalid inputs
+    # Test error handling with invalid inputs.
     print("\nError Handling Tests:")
     error_cases = [
         (-5, "negative radius"),
@@ -115,3 +120,4 @@ if __name__ == "__main__":
             print(f"✗ {description}: No exception raised")
         except (ValueError, TypeError) as e:
             print(f"✓ {description}: {type(e).__name__}")
+```
