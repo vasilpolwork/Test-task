@@ -38,7 +38,7 @@ def calculate_area(radius: float) -> float:
         TypeError: If radius is not a number.
     """
     _validate_radius(radius)
-    return math.pi * radius * radius
+    return math.pi * radius ** 2
 
 
 def calculate_circumference(radius: float) -> float:
@@ -61,29 +61,57 @@ def calculate_circumference(radius: float) -> float:
     return 2 * math.pi * radius
 
 
+def calculate_diameter(radius: float) -> float:
+    """
+    Calculate the diameter of a circle given its radius.
+    
+    Uses the formula: D = 2 * r
+    
+    Args:
+        radius: The radius of the circle. Must be a non-negative number.
+        
+    Returns:
+        The diameter of the circle as a float.
+        
+    Raises:
+        ValueError: If radius is negative, NaN, or infinite.
+        TypeError: If radius is not a number.
+    """
+    _validate_radius(radius)
+    return 2 * radius
+
+
 if __name__ == "__main__":
     # Test cases with valid radius values
     test_cases = [0, 1, 10, 2.5]
     
     print("Circle Calculations")
-    print("-" * 50)
+    print("-" * 60)
     
     for radius in test_cases:
         try:
             area = calculate_area(radius)
             circumference = calculate_circumference(radius)
-            print(f"Radius {radius:>5}: Area = {area:>10.2f}, Circumference = {circumference:>10.2f}")
+            diameter = calculate_diameter(radius)
+            print(f"Radius {radius:>5}: Area = {area:>10.2f}, Circumference = {circumference:>10.2f}, Diameter = {diameter:>8.2f}")
         except (ValueError, TypeError) as e:
             print(f"Error for radius {radius}: {e}")
     
-    print("-" * 50)
+    print("-" * 60)
     
     # Test error handling with invalid inputs
     print("\nError Handling Tests:")
-    error_cases = [(-5, "negative radius"), ("abc", "invalid type"), (float('nan'), "NaN value")]
+    error_cases = [
+        (-5, "negative radius"),
+        ("abc", "invalid type"),
+        (float('nan'), "NaN value"),
+        (float('inf'), "infinite value"),
+        (True, "boolean value")
+    ]
     
     for test_value, description in error_cases:
         try:
             calculate_area(test_value)
+            print(f"✗ {description}: No exception raised")
         except (ValueError, TypeError) as e:
-            print(f"✓ {description}: {e}")
+            print(f"✓ {description}: {type(e).__name__}")
