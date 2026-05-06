@@ -95,9 +95,22 @@ def main():
         f.write(f"## [{date_str}]\n\n{new_entry}\n\n{current_changelog}")
 
     # 4. Finalize commit message
-    commit_msg = "feat(auto): AI-driven code improvement and docs update"
+    print("Generating detailed commit message...")
+
+    # We ask the AI to format all collected summaries into a professional Git commit
+    commit_prompt = (
+        "Create a professional Git commit message based on these changes. "
+        "Use Conventional Commits format. "
+        "Header: feat(auto): AI-driven code improvement and docs update\n"
+        "Body: List all changes as bullet points.\n"
+        f"Changes list:\n{all_summaries}"
+    )
+
+    detailed_commit_msg = process_with_ai(commit_prompt, "")
+
     with open(".commit_msg", "w") as f:
-        f.write(commit_msg)
+        # We ensure the message is written exactly as AI generated it
+        f.write(detailed_commit_msg)
 
 if __name__ == "__main__":
     main()
