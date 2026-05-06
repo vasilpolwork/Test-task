@@ -1,27 +1,22 @@
 name: AI Self-Improvement Cycle & Ephemeral Testing
 
 on:
-  # Automated cycle every 2 hours
   #schedule:
   #  - cron: '0 */2 * * *'
-  # Manual trigger for debugging/testing
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  # STAGE 1: AI Agent refactors the code and generates documentation
+  # STAGE 1: AI Agent refactors code and pushes to a temporary branch
   improve:
     name: AI Code Enhancement
     runs-on: ubuntu-latest
-    outputs:
-      has_changes: ${{ steps.check_changes.outputs.changed }}
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      # Note: GitHub-hosted runners are usually fine, but we keep it consistent
       - name: Set up Python Environment
         uses: actions/setup-python@v5
         with:
@@ -36,108 +31,97 @@ jobs:
           MODEL_NAME: ${{ vars.MODEL_NAME }}
         run: python agent/agent.py
 
-      - name: Verify if changes were made
-        id: check_changes
+      - name: Push to Temporary Branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ -f .commit_msg ]; then
-            echo "changed=true" >> $GITHUB_OUTPUT
+            git config --global user.name "AI-Agent-Bot"
+            git config --global user.email "ai-bot@users.noreply.github.com"
+          
+            # Authenticate Git with the short-lived GitHub Token
+            git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
+          
+            # Create or update the buffer branch for testing
+            git checkout -b ai-improved-code
+            git add .
+            git commit -m "$(cat .commit_msg) [skip ci]"
+            git push origin ai-improved-code --force
           else
-            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "No changes detected. Skipping push."
           fi
 
-      # Pack everything including hidden files for the next runners
-      - name: Upload Artifact (Improved Code)
-        if: steps.check_changes.outputs.changed == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: improved-code
-          path: .
-          include-hidden-files: true
-
-  # STAGE 2: Spin up the ephemeral Hetzner VPS
+  # STAGE 2: Provision the Hetzner VPS (Runner)
   provision:
     name: Infrastructure Provisioning
     needs: improve
-    if: needs.improve.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Deployment Scripts
         uses: actions/checkout@v4
-
       - name: Install Hetzner Cloud CLI
         run: |
           curl -sL https://github.com/hetznercloud/cli/releases/latest/download/hcloud-linux-amd64.tar.gz | tar xz
           sudo mv hcloud /usr/local/bin/
-
-      - name: Deploy Ephemeral VPS via deploy.sh
+      - name: Deploy Ephemeral VPS
         env:
           HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
           GH_PAT: ${{ secrets.GH_PAT }}
         run: bash infra/deploy.sh
 
-  # STAGE 3: Run validation tests on the Self-hosted Runner (Hetzner)
+  # STAGE 3: Validate the AI-improved code on the ephemeral Runner
   test:
     name: Validation on Self-hosted Runner
     needs: [improve, provision]
-    # Target the ephemeral CX23 VPS created in Stage 2
     runs-on: self-hosted
     steps:
-      - name: Download Improved Code Artifact
-        uses: actions/download-artifact@v4
+      # Bypass Artifacts service by checking out the temporary branch directly
+      - name: Checkout Improved Code
+        uses: actions/checkout@v4
         with:
-          name: improved-code
+          ref: ai-improved-code
 
       - name: Execute Pytest Suite
         run: |
-          # Bypassing PEP 668 via --break-system-packages for ephemeral CI environment
+          # Use --break-system-packages to bypass PEP 668 on ephemeral Ubuntu 24.04
           pip install pytest --break-system-packages
-          
-          # Install app dependencies if present
           if [ -f requirements.txt ]; then
             pip install -r requirements.txt --break-system-packages
           fi
-          
-          # Stop execution if tests fail to prevent pushing broken code
           pytest tests/ || exit 1
 
-  # STAGE 4: Finalize the cycle by pushing the verified code
+  # STAGE 4: If tests pass, merge the verified branch into main
   deploy:
-    name: Push Verified Changes
+    name: Merge to Main
     needs: test
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Source Code
+      - name: Checkout Main Branch
         uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          ref: main
+          fetch-depth: 0
 
-      - name: Download Final Code Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: improved-code
-
-      - name: Commit and Push to Main
+      - name: Merge AI Changes
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config --global user.name "AI-Agent-Bot"
           git config --global user.email "ai-bot@users.noreply.github.com"
-          
           git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
           
-          COMMIT_TEXT=$(cat .commit_msg)
+          # Perform a non-fast-forward merge to keep the verification record
+          git merge origin/ai-improved-code --no-ff -m "Verified: AI improvement cycle completed"
+          git push origin main
           
-          git add .
-          git reset .commit_msg
-          git commit -m "$COMMIT_TEXT [skip ci]"
-          
-          git push origin HEAD:main
+          # Clean up the temporary branch after successful deployment
+          git push origin --delete ai-improved-code
 
-  # STAGE 5: Resource Cleanup (Cost Control)
+  # STAGE 5: Resource Cleanup
   cleanup:
     name: Infrastructure Cleanup
     needs: [provision, test, deploy]
-    # Always delete the VPS even if tests or previous jobs fail
+    # Execute cleanup regardless of success or failure of preceding jobs
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -145,16 +129,15 @@ jobs:
         run: |
           curl -sL https://github.com/hetznercloud/cli/releases/latest/download/hcloud-linux-amd64.tar.gz | tar xz
           sudo mv hcloud /usr/local/bin/
-
       - name: Destroy Ephemeral VPS
         env:
           HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
         run: |
-          # Using the correct --selector flag for hcloud CLI
+          # Locate and delete the server using its scope label
           SERVER_ID=$(hcloud server list --selector scope=ephemeral-test -o noheader -o "columns=id")
           if [ -n "$SERVER_ID" ]; then
-            echo "Deleting server ID: $SERVER_ID"
+            echo "Destroying ephemeral server: $SERVER_ID"
             hcloud server delete $SERVER_ID
           else
-            echo "No active ephemeral servers found."
+            echo "No active ephemeral servers found for cleanup."
           fi
